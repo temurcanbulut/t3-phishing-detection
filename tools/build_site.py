@@ -17,6 +17,6 @@ with app.test_request_context():
         "index.html", runtime="static", safe_browsing_enabled=False, asset_prefix="assets"
     )
 (destination / "index.html").write_text(html, encoding="utf-8")
-for name in ("styles.css", "workspace.css", "app.mjs", "url-local.mjs", "reports.mjs", "logo.png"):
+for name in ("styles.css", "workspace.css", "facts.css", "app.mjs", "url-local.mjs", "reports.mjs", "facts.mjs", "logo.png"):
     shutil.copyfile(ROOT / "T3-Phishing-Detection" / "static" / name, assets / name)
 print(destination)

@@ -1,5 +1,6 @@
 import {analyzeLocal} from './url-local.mjs';
 import {parseSavedReport, compareSavedReports, MAX_REPORT_BYTES} from './reports.mjs';
+import {evidenceFacts} from './facts.mjs';
 
 const $ = selector => document.querySelector(selector);
 const staticMode = document.body.dataset.runtime === 'static';
@@ -22,6 +23,12 @@ function showTab(raw) {
   $('#evidence-tab').setAttribute('aria-selected', String(!raw));
   $('#raw-tab').tabIndex = raw ? 0 : -1;
   $('#evidence-tab').tabIndex = raw ? -1 : 0;
+}
+
+function factList(item) {
+  const list = node('dl', undefined, 'fact-list');
+  for (const [label,value] of evidenceFacts(item)) list.append(node('dt',label),node('dd',value));
+  return list;
 }
 
 function render(data, origin = 'Bu oturumda oluşturuldu.') {
@@ -54,7 +61,12 @@ function render(data, origin = 'Bu oturumda oluşturuldu.') {
     const summary = node('summary');
     summary.append(node('span', item.label, 'probe-name'), node('span', labels[item.status] || item.status, `probe-state ${item.status}`));
     details.append(summary, node('p', item.note, 'probe-note'));
-    if (item.data !== null && item.data !== undefined) details.append(node('pre', JSON.stringify({collected_at:item.collected_at, data:item.data}, null, 2)));
+    details.append(factList(item));
+    if (item.data !== null && item.data !== undefined) {
+      const raw = node('details',undefined,'technical-record');
+      raw.append(node('summary','Teknik kaydı aç'),node('pre',JSON.stringify({collected_at:item.collected_at,data:item.data},null,2)));
+      details.append(raw);
+    }
     return details;
   }));
   $('#limits').replaceChildren(...data.limitations.map(text => node('li', text)));
@@ -170,8 +182,19 @@ $('#compare-report').addEventListener('change', async event => {
     result.append(node('p', `${comparison.changes.length} kontrol değişti. ${comparison.scope_changed ? 'İnceleme kapsamı da değişti; sonuçları aynı koşullar gibi yorumlamayın.' : 'İnceleme kapsamları aynı.'}`, 'notice'));
     result.append(node('p', `Önce: ${comparison.before_started_at} → Sonra: ${comparison.after_started_at}`, 'quiet'));
     for (const change of comparison.changes) {
-      const detail = node('details'), summary = node('summary', change.probe);
-      detail.append(summary, node('pre', JSON.stringify({before:change.before, after:change.after}, null, 2)));
+      const detail = node('details');
+      const oldState = change.before ? labels[change.before.status] || change.before.status : 'KAYIT YOK';
+      const newState = change.after ? labels[change.after.status] || change.after.status : 'KAYIT YOK';
+      const summary = node('summary', `${change.after?.label || change.before?.label || change.probe} · ${oldState} → ${newState}`);
+      const sides = node('div',undefined,'comparison-sides');
+      for (const [heading,item] of [['Önce',change.before],['Sonra',change.after]]) {
+        const side = node('section');
+        side.append(node('h3',heading),item ? factList(item) : node('p','Bu kayıtta yer almıyor.','quiet'));
+        sides.append(side);
+      }
+      const raw = node('details',undefined,'technical-record');
+      raw.append(node('summary','Teknik farkı aç'),node('pre',JSON.stringify({before:change.before,after:change.after},null,2)));
+      detail.append(summary,sides,raw);
       result.append(detail);
     }
     if (!comparison.changes.length) result.append(node('p', 'Kayıtlı bulgular aynı. Bu, sitenin değişmediğini veya güvenli olduğunu kanıtlamaz.', 'quiet'));

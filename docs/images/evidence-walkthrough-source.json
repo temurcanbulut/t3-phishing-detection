@@ -1,0 +1,34 @@
+{
+  "actual_target": "https://example.com/",
+  "source": "Browser screenshots of real localhost application; evidence rows are not redrawn or invented.",
+  "presentation": "Four captioned chapters with editorial holds, not a performance recording.",
+  "report_screenshot_sha256": "c8d2c56a017111dabb9989dc89563172c833f6272adcb39d78027f33a171dee3",
+  "comparison_screenshot_sha256": "f4d2312555dcf5b39ec04ab0cbdf9f2886b58c60ab8630484acf09703dab227c",
+  "screenshot_regions": {
+    "http": {
+      "height": 331.734375,
+      "width": 1044,
+      "x": 110.5,
+      "y": 1314.0625
+    },
+    "query": {
+      "height": 211.96875,
+      "width": 1044,
+      "x": 110.5,
+      "y": 314.578125
+    },
+    "tls": {
+      "height": 366.125,
+      "width": 1044,
+      "x": 110.5,
+      "y": 1714.59375
+    }
+  },
+  "comparison_region": {
+    "height": 462.875,
+    "width": 1044,
+    "x": 110.5,
+    "y": 2662.4375
+  },
+  "provider_enabled": false
+}

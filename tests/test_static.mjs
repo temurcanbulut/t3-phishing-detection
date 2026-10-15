@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {analyzeLocal} from '../T3-Phishing-Detection/static/url-local.mjs';
 import {parseSavedReport, compareSavedReports, MAX_REPORT_BYTES} from '../T3-Phishing-Detection/static/reports.mjs';
+import {evidenceFacts} from '../T3-Phishing-Detection/static/facts.mjs';
 
 test('static client exposes its limited scope and performs no fetch', () => {
   const original = globalThis.fetch;
@@ -73,6 +74,16 @@ test('Python records support bracket-free IPv6 hosts and expanded Unicode paths'
   record.target.host = '2606:4700:4700::1111';
   record.target.url += '%E6%B5%8B'.repeat(300);
   assert.equal(parseSavedReport(JSON.stringify(record)).target.host, record.target.host);
+});
+
+test('readable facts preserve source values without creating a safety verdict', () => {
+  const facts = evidenceFacts({id:'http',data:[{url:'https://example.com/',status:200,body_bytes_collected:128,body_truncated:true,page:{title:'<img src=x onerror=alert(1)>',forms:[],encoding:'utf-8'}}]});
+  assert.deepEqual(facts[0],['HTTP adımı 1','200 · https://example.com/']);
+  assert.equal(facts.find(([label]) => label === 'Sayfa başlığı')[1],'<img src=x onerror=alert(1)>');
+  assert.equal(facts.find(([label]) => label.includes('form sayısı'))[1],'0');
+  assert.ok(facts.find(([label]) => label === 'Toplanan gövde')[1].includes('sınıra ulaşıldı'));
+  assert.deepEqual(evidenceFacts({id:'tls',status:'unavailable',data:null}),[]);
+  assert.equal(evidenceFacts({id:'tls',data:{host:'example.com'}}).length,1);
 });
 
 test('import and comparison preserve hostile values as data and never fetch', () => {

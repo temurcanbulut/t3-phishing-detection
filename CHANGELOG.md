@@ -1,5 +1,10 @@
 # Changelog
 
+## Readable evidence — 2026-10-15
+
+- Present source observations as labeled facts and readable before/after comparisons; retain expandable technical JSON.
+- Add a captioned walkthrough of actual local results, including the passive-to-active scope warning, to both README languages.
+
 ## Product workflows — 2026-10-15
 
 - Added local saved-report import, schema/structure limits, probe overview and same-target report comparison with scope changes and JSON difference export.

@@ -2,7 +2,6 @@
 <p align="center">Bağlantıyı incele. Bulguları kaydet. Nelerin değiştiğini karşılaştır.</p>
 <p align="center"><a href="README.md">English</a> · <a href="docs/TECHNICAL.md">Teknik referans</a></p>
 
-![Gerçek yerel uygulamada inceleme, kayıt açma ve karşılaştırma](docs/images/workflow.gif)
 
 T3; DNS, TLS, yönlendirme ve sınırlı HTML bulgularını tek kayıtta toplar. Bir bağlantıya güvenilirlik puanı vermez. Sertifika veya alan adı kaydı, site sahibinin niyetini kesin olarak kanıtlayamaz.
 

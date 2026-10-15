@@ -3,51 +3,41 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>T3 · Bağlantı analizi</title>
-  <link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-  <script defer src="{{ url_for('static', filename='app.js') }}"></script>
+  {% if runtime == 'static' %}<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">{% endif %}
+  <title>T3 — URL & Domain Inspector</title>
+  <link rel="icon" href="{{ asset_prefix }}/logo.png">
+  <link rel="stylesheet" href="{{ asset_prefix }}/styles.css">
+  <script type="module" src="{{ asset_prefix }}/app.mjs"></script>
 </head>
-<body>
-  <div class="shell">
-    <header>
-      <a class="brand" href="/" aria-label="T3 ana sayfa"><span class="mark">T3</span><span>PHISHING DETECTION</span></a>
-      <a class="source" href="https://github.com/temurcanbulut/t3-phishing-detection">Kaynak kod ↗</a>
-    </header>
+<body data-runtime="{{ runtime }}">
+  <div class="workspace">
+    <header><div class="identity"><strong>T3</strong><span>URL & DOMAIN INSPECTOR</span></div><div class="runtime">{% if runtime == 'static' %}BROWSER / OFFLINE{% else %}LOCAL / CLI + WEB{% endif %}</div><a href="https://github.com/temurcanbulut/t3-phishing-detection">Repository ↗</a></header>
     <main>
-      <section class="intro">
-        <p class="eyebrow">BAĞLANTININ ARKASINDA NE VAR?</p>
-        <h1>Tıklamadan önce,<br><span>işaretleri incele.</span></h1>
-        <p class="lead">Bir bağlantıyı analiz et; gözlenen risk işaretlerini, dayanaklarını ve eksik kalan kontrolleri birlikte gör.</p>
-      </section>
-      <section class="panel input-panel" aria-label="Bağlantı analizi">
-        <form id="analysis-form">
-          <label for="url">İncelenecek bağlantı</label>
-          <div class="input-row">
-            <input id="url" name="url" type="text" inputmode="url" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="2048" placeholder="https://example.com/hesap" required aria-describedby="privacy-note">
-            <button id="analyze-button" type="submit">Bağlantıyı incele <span aria-hidden="true">↗</span></button>
-          </div>
-          <p class="hint" id="privacy-note">{% if safe_browsing_enabled %}Safe Browsing açık: tam bağlantı Google'a gönderilir.{% else %}Safe Browsing yapılandırılmadı. Tehdit listesi kontrolü yapılmayacak.{% endif %} Hedef sunucuyla HTTPS bağlantısı kurulur. Raporlar uygulamada saklanmaz.</p>
+      <div class="section-label">INVESTIGATION WORKSPACE <span>01</span></div>
+      <h1>Bağlantı ve alan adı incelemesi</h1>
+      <p class="intro">Puan tahminleri yerine kaynağı, zamanı ve kapsamı belli teknik bulgular.</p>
+      {% if runtime == 'static' %}<div class="notice"><strong>Statik sürüm:</strong> URL tarayıcıda ayrıştırılır. DNS, TLS, içerik ve tehdit listesi kontrolleri bu sayfada çalışmaz. Ağ incelemesi için yerel uygulamayı veya <code>python t3.py inspect example.com --active</code> komutunu kullanın.</div>{% endif %}
+      <section class="query" aria-label="İnceleme seçenekleri">
+        <form id="inspect-form">
+          <label for="target">HEDEF URL / ALAN ADI</label>
+          <div class="query-row"><span class="prompt" aria-hidden="true">›</span><input id="target" name="target" type="text" maxlength="2048" required autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="example.com veya https://example.com/login"><button id="run" type="submit">İncele <span aria-hidden="true">↵</span></button></div>
+          <div class="options"><label><input type="checkbox" id="active" {% if runtime == 'static' %}disabled{% endif %}> Hedefe bağlan: DNS, TLS, yönlendirmeler ve sınırlı HTML</label><label><input type="checkbox" id="threat" {% if runtime == 'static' or not safe_browsing_enabled %}disabled{% endif %}> Tam URL'yi Google Safe Browsing'e gönder {% if not safe_browsing_enabled %}<span>(anahtar yok)</span>{% endif %}</label></div>
+          <p class="quiet">Varsayılan mod hedefe ve üçüncü taraflara bağlanmaz. Ağ işlemleri 12 saniyelik süre bütçesi, 4 yönlendirme ve 128 KiB içerikle sınırlıdır. Raporlar otomatik kaydedilmez.</p>
         </form>
-        <p id="error" role="alert" hidden></p>
-        <p id="loading" role="status" hidden>Kontroller sürüyor…</p>
+        <p id="error" role="alert" hidden></p><p id="progress" role="status" hidden>Kanıtlar toplanıyor…</p>
       </section>
-      <section id="report" aria-labelledby="report-title" hidden>
-        <div class="report-toolbar"><h2 id="report-title">Analiz raporu</h2><button id="download" class="secondary" type="button">JSON indir ↓</button></div>
-        <div class="panel summary">
-          <div><p class="eyebrow">GÖZLENEN RİSK PUANI</p><p class="score"><span id="risk-score">0</span><small>/ 100</small></p><p class="hint">Olasılık yüzdesi değildir.</p></div>
-          <div class="summary-detail"><p id="risk-level" class="badge"></p><p id="analyzed-url" class="analyzed-url"></p><p id="coverage" class="hint"></p><p id="incomplete" class="hint" hidden>Bazı kontroller eksik. Düşük puan, bağlantının güvenli olduğunu göstermez.</p></div>
-        </div>
-        <div id="checks" class="checks"></div>
-        <p id="methodology" class="methodology"></p>
+      <section id="report" hidden aria-labelledby="report-heading">
+        <div class="report-heading"><h2 id="report-heading">İnceleme kaydı</h2><button class="secondary" id="export" type="button">JSON dışa aktar ↓</button></div>
+        <div class="target-card"><div><span class="small-label">GERÇEK ANA MAKİNE</span><strong id="host"></strong><span id="domain" class="quiet"></span></div><div class="summary-meta"><span id="mode"></span><span id="duration"></span><span id="completion"></span></div></div>
+        <p id="normalized-url" class="normalized"></p>
+        <div id="conclusion" class="notice"></div>
+        <div class="tabs" role="tablist" aria-label="Rapor görünümü"><button id="evidence-tab" role="tab" aria-selected="true" aria-controls="evidence-panel" type="button">Bulgular</button><button id="raw-tab" role="tab" aria-selected="false" aria-controls="raw-panel" tabindex="-1" type="button">Ham JSON</button></div>
+        <div id="evidence-panel" role="tabpanel" aria-labelledby="evidence-tab"><div id="findings"></div><div id="evidence"></div><ul id="limits" class="limits"></ul></div>
+        <div id="raw-panel" role="tabpanel" aria-labelledby="raw-tab" hidden><pre id="raw"></pre></div>
       </section>
-      <section class="notes" aria-label="Nasıl çalışır?">
-        <article><span class="number">01</span><h2>Bağlantı yapısı</h2><p>Protokol, alan adı, uzunluk ve yol bölümleri incelenir.</p></article>
-        <article><span class="number">02</span><h2>Bağlantı kontrolleri</h2><p>TLS ve HSTS başlıkları kontrol edilir. Yönlendirmeler takip edilmez.</p></article>
-        <article><span class="number">03</span><h2>Açıklanabilir sonuç</h2><p>Her bulgu gerekçesiyle gösterilir. Ulaşılamayan veriler açıkça belirtilir.</p></article>
-      </section>
+      <section class="command"><span>CLI</span><code>python t3.py inspect example.com --active --json</code><p>Web arayüzü ve komut satırı aynı inceleme çekirdeğini kullanır. Statik sürümün kapsamı yalnızca URL ayrıştırmadır.</p></section>
     </main>
-    <footer><span>T3 · Temur Can Bulut</span><span>Bir analiz başlangıcı. Güvenlik garantisi vermez.</span></footer>
+    <footer><span>T3 · Temur Can Bulut</span><span>Bir bulgunun yokluğu, güvenlik kanıtı değildir.</span></footer>
   </div>
 </body>
 </html>

@@ -1,3 +1,9 @@
 Flask>=3.1,<4
-requests>=2.32,<3
 waitress>=3,<4
+aiohttp>=3.14.5,<4
+dnspython>=2.7,<3
+cryptography>=45,<51
+idna>=3.10,<4
+tldextract>=5.3,<6
+html5lib==1.1
+yarl>=1.25,<2

@@ -2,6 +2,10 @@
 <p align="center">Bağlantıyı incele. Bulguları kaydet. Nelerin değiştiğini karşılaştır.</p>
 <p align="center"><a href="README.md">English</a> · <a href="docs/TECHNICAL.md">Teknik referans</a></p>
 
+![Gerçek yerel inceleme: URL ve seçenekler, okunabilir TLS ve HTTP bulguları, ardından rapor karşılaştırması](docs/images/evidence-walkthrough.gif)
+
+**İncelemeyi adım adım izle:** URL ve seçenekler → okunabilir TLS bulguları → HTTP gözlemleri → önce/sonra karşılaştırması. GIF, yerel uygulamanın gerçek `example.com` sonuçlarından ve açıklamalı beklemelerden oluşur. Karşılaştırmada pasif kapsamdan aktif kapsama geçilir; bu, sitenin değiştiği anlamına gelmez. Tehdit sağlayıcısı kullanılmadı. [Kayıt bağlamı](docs/DEMONSTRATION.md).
+
 
 T3; DNS, TLS, yönlendirme ve sınırlı HTML bulgularını tek kayıtta toplar. Bir bağlantıya güvenilirlik puanı vermez. Sertifika veya alan adı kaydı, site sahibinin niyetini kesin olarak kanıtlayamaz.
 

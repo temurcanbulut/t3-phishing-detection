@@ -8,6 +8,10 @@
 <p align="center">Inspect a link. Keep the observations. Compare what changed.<br>A local investigation workspace with a CLI, timestamped evidence and portable JSON reports.</p>
 <p align="center"><a href="README.tr.md">Türkçe</a> · <a href="#start">Start</a> · <a href="docs/TECHNICAL.md">Technical reference</a> · <a href="docs/ROADMAP.md">Roadmap</a></p>
 
+![A real local inspection: URL and options, readable TLS and HTTP observations, then report comparison](docs/images/evidence-walkthrough.gif)
+
+**Follow an inspection:** URL and options → readable TLS facts → HTTP observations → before/after comparison. The GIF uses actual local `example.com` results with captioned pauses. The comparison changes from passive to active scope; it does not demonstrate that the website changed. No threat provider was enabled. [Recording context](docs/DEMONSTRATION.md).
+
 ## What you can do
 
 - **See the actual destination.** Separate the entered URL, ASCII host and registrable domain before inspecting a link.
@@ -81,6 +85,6 @@ node --test tests/test_static.mjs
 python tools/build_site.py
 ```
 
-The current local run passes 60 Python and 7 JavaScript tests. These verify transport, parsing, report boundaries and comparison, not phishing detection accuracy. CI covers Windows/Linux and Python 3.11/3.13. A real provider-key integration remains unverified.
+The current local run passes 60 Python and 8 JavaScript tests. These verify transport, parsing, report boundaries and comparison, not phishing detection accuracy. CI covers Windows/Linux and Python 3.11/3.13. A real provider-key integration remains unverified.
 
 [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md) · [Third-party notices](THIRD_PARTY_NOTICES.txt)

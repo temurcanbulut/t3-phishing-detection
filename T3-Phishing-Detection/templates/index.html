@@ -1,128 +1,43 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>T-3 Phishing Detection</title>
-    <link rel="icon" href="logo.png">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% if runtime == 'static' %}<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">{% endif %}
+  <title>T3 — URL & Domain Inspector</title>
+  <link rel="icon" href="{{ asset_prefix }}/logo.png">
+  <link rel="stylesheet" href="{{ asset_prefix }}/styles.css">
+  <script type="module" src="{{ asset_prefix }}/app.mjs"></script>
 </head>
-<body>
-    <div class="container">
-        <div class="logo"></div>
-        <h1>Phishing Detection</h1>
-        <p>Verilen domaini işler, olası phishing saldırılarına karşı taramalar gerçekleştirir.</p>
-        
-        <div class="button-container">
-            <input type="text" id="domain" placeholder="Alan adını girin">
-            <button onclick="checkDomain()">Kontrol Et</button>
-            <button onclick="toggleScoreInfo()">Skor Tablosunu Göster</button>
-            <button onclick="toggleDisclaimer()">Sorumluluk Reddi</button>
-        </div>
-        
-        <div id="disclaimerText" class="disclaimer" style="display:none;">
-            <p><strong>Sorumluluk Reddi:</strong> Bu skorlar yalnızca bilgilendirme amaçlıdır. <br> Kesin sonuçlar için profesyonel bir analiz gereklidir.</p>
-        </div>
-        
-        <div id="loading" class="loading" style="display:none;">
-            <div class="spinner"></div>
-        </div>
-        
-        <div class="result-container">
-            <div class="result" id="result" style="display:none;">
-                <p><strong>Güven Skoru:</strong> <span id="score">-</span> / 100</p>
-                <p><strong>URL:</strong> <span id="checkedUrl">-</span></p>
-                <p><strong>SSL Var mı:</strong> <span id="sslStatus">-</span></p>
-                <p><strong>Sertifika Veren:</strong> <span id="issuedBy">-</span></p>
-                <p><strong>Sertifika Verilen:</strong> <span id="issuedTo">-</span></p>
-                <p><strong>Geçerlilik Tarihi:</strong> <span id="validFrom">-</span> - <span id="validTill">-</span></p>
-                <p><strong>Kalan Gün:</strong> <span id="daysToExpiry">-</span></p>
-                <p><strong>Domain Yaşı (gün):</strong> <span id="domainAge">-</span></p>
-                <p><strong>Domain Sahibi:</strong> <span id="owner">-</span></p>
-                <p><strong>Domain Sahibi E-posta:</strong> <span id="ownerEmail">-</span></p>
-                <p><strong>Domain Rank:</strong> <span id="domainRank">-</span></p>
-                <p><strong>HSTS Desteği:</strong> <span id="hstsSupport">-</span></p>
-                <p><strong>URL Derinliği:</strong> <span id="urlDepth">-</span></p>
-                <p><strong>IP Adresi İçeriyor mu:</strong> <span id="containsIp">-</span></p>
-                <p><strong>Google Safe Browsing Durumu:</strong> <span id="googleSafeBrowsingStatus">-</span></p>
-            </div>
-        </div>
-
-        <div id="scoreCalculationInfo" class="modal" style="display:none;">
-            <div class="modal-content">
-                <span class="close-button" onclick="toggleScoreInfo()">&times;</span>
-                <h2>Phishing Skoru Nasıl Hesaplanır?</h2>
-                <ul>
-                    <li><strong>SSL Sertifikası:</strong> Eğer site SSL sertifikasına sahip değilse, skordan 30 puan düşer.</li>
-                    <li><strong>Domain Yaşı:</strong> Domain yaşı 1 yıldan az ise, skordan 20 puan düşer.</li>
-                    <li><strong>Domain Rank:</strong> Domain rank 1 milyonun üzerindeyse, skordan 20 puan düşer.</li>
-                    <li><strong>URL Uzunluğu:</strong> URL uzunluğu 75 karakterden fazla ise, skordan 10 puan düşer.</li>
-                    <li><strong>URL Derinliği:</strong> URL’de 5'ten fazla “/” işareti varsa, skordan 10 puan düşer.</li>
-                    <li><strong>IP Adresi İçeriyorsa:</strong> URL'de IP adresi varsa, skordan 10 puan düşer.</li>
-                    <li><strong>HSTS Desteği:</strong> HSTS desteği yoksa, skordan 10 puan düşer.</li>
-                    <li><strong>Google Safe Browsing:</strong> Eğer site Google Safe Browsing tarafından kötü amaçlı olarak işaretlenmişse, skordan 50 puan düşer.</li>
-                </ul>
-            </div>
-        </div>
-        <div class="footer">
-            <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js" integrity="sha384-rOA1PnstxnOBLzCLMcre8ybwbTmemjzdNlILg8O7z1lUkLXozs4DHonlDtnE7fpc" crossorigin="anonymous"></script>
-            <footer>
-                <div class="rounded-social-buttons">
-                    <a class="social-button github" href="https://github.com/T3mr" target="_blank"><i class="fab fa-github"></i></a>
-                    <a class="social-button twitter" href="https://x.com/t3mr_tr" target="_blank"><i class="fab fa-twitter"></i></a>
-                    <a class="social-button linkedin" href="https://www.linkedin.com/in/temurcanbulut/" target="_blank"><i class="fab fa-linkedin"></i></a>
-                    <a class="social-button youtube" href="https://www.youtube.com/channel/UC_KyvuYaefUyGhG7jA-Bzpw" target="_blank"><i class="fab fa-youtube"></i></a>
-                </div>
-            </footer>
-        </div>
-          
-
-        <script>
-            function checkDomain() {
-                const domain = document.getElementById('domain').value;
-                document.getElementById('loading').style.display = 'block';
-                fetch(`/check_domain?domain=${domain}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        document.getElementById('score').innerText = data.score || '-';
-                        document.getElementById('checkedUrl').innerText = domain;
-                        document.getElementById('sslStatus').innerText = data.ssl_certificate_status ? 'Evet' : 'Hayır';
-                        document.getElementById('issuedBy').innerText = data.issued_by || 'Bilinmiyor';
-                        document.getElementById('issuedTo').innerText = data.issued_to || 'Bilinmiyor';
-                        document.getElementById('validFrom').innerText = data.valid_from || 'Bilinmiyor';
-                        document.getElementById('validTill').innerText = data.valid_till || 'Bilinmiyor';
-                        document.getElementById('daysToExpiry').innerText = data.days_to_expiry || 'Bilinmiyor';
-                        document.getElementById('domainAge').innerText = data.domain_age_days || 'Bilinmiyor';
-                        document.getElementById('owner').innerText = data.owner || 'Bilinmiyor';
-                        document.getElementById('ownerEmail').innerText = data.owner_email || 'Bilinmiyor';
-                        document.getElementById('domainRank').innerText = data.domain_rank || 'Bilinmiyor';
-                        document.getElementById('hstsSupport').innerText = data.hsts_support ? 'Evet' : 'Hayır';
-                        document.getElementById('urlDepth').innerText = data.url_depth || '-';
-                        document.getElementById('containsIp').innerText = data.contains_ip ? 'Evet' : 'Hayır';
-                        document.getElementById('googleSafeBrowsingStatus').innerText = data.google_safe_browsing_status ? 'Kötü amaçlı' : 'Güvenli';
-                        document.getElementById('result').style.display = 'block';
-                        document.getElementById('loading').style.display = 'none';
-                        window.scrollTo({
-                            top: document.getElementById('result').offsetTop,
-                            behavior: 'smooth'
-                        });
-                    })
-                    .catch(error => {
-                        document.getElementById('result').innerText = 'Bir hata oluştu. Lütfen tekrar deneyin.';
-                        document.getElementById('loading').style.display = 'none';
-                    });
-            }
-
-            function toggleScoreInfo() {
-                const modal = document.getElementById('scoreCalculationInfo');
-                modal.style.display = modal.style.display === 'none' ? 'block' : 'none';
-            }
-
-            function toggleDisclaimer() {
-                const disclaimerText = document.getElementById('disclaimerText');
-                disclaimerText.style.display = disclaimerText.style.display === 'none' ? 'block' : 'none';
-            }
-        </script>
-    </div>
+<body data-runtime="{{ runtime }}">
+  <div class="workspace">
+    <header><div class="identity"><strong>T3</strong><span>URL & DOMAIN INSPECTOR</span></div><div class="runtime">{% if runtime == 'static' %}BROWSER / OFFLINE{% else %}LOCAL / CLI + WEB{% endif %}</div><a href="https://github.com/temurcanbulut/t3-phishing-detection">Repository ↗</a></header>
+    <main>
+      <div class="section-label">INVESTIGATION WORKSPACE <span>01</span></div>
+      <h1>Bağlantı ve alan adı incelemesi</h1>
+      <p class="intro">Puan tahminleri yerine kaynağı, zamanı ve kapsamı belli teknik bulgular.</p>
+      {% if runtime == 'static' %}<div class="notice"><strong>Statik sürüm:</strong> URL tarayıcıda ayrıştırılır. DNS, TLS, içerik ve tehdit listesi kontrolleri bu sayfada çalışmaz. Ağ incelemesi için yerel uygulamayı veya <code>python t3.py inspect example.com --active</code> komutunu kullanın.</div>{% endif %}
+      <section class="query" aria-label="İnceleme seçenekleri">
+        <form id="inspect-form">
+          <label for="target">HEDEF URL / ALAN ADI</label>
+          <div class="query-row"><span class="prompt" aria-hidden="true">›</span><input id="target" name="target" type="text" maxlength="2048" required autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="example.com veya https://example.com/login"><button id="run" type="submit">İncele <span aria-hidden="true">↵</span></button></div>
+          <div class="options"><label><input type="checkbox" id="active" {% if runtime == 'static' %}disabled{% endif %}> Hedefe bağlan: DNS, TLS, yönlendirmeler ve sınırlı HTML</label><label><input type="checkbox" id="threat" {% if runtime == 'static' or not safe_browsing_enabled %}disabled{% endif %}> Tam URL'yi Google Safe Browsing'e gönder {% if not safe_browsing_enabled %}<span>(anahtar yok)</span>{% endif %}</label></div>
+          <p class="quiet">Varsayılan mod hedefe ve üçüncü taraflara bağlanmaz. Ağ işlemleri 12 saniyelik süre bütçesi, 4 yönlendirme ve 128 KiB içerikle sınırlıdır. Raporlar otomatik kaydedilmez.</p>
+        </form>
+        <p id="error" role="alert" hidden></p><p id="progress" role="status" hidden>Kanıtlar toplanıyor…</p>
+      </section>
+      <section id="report" hidden aria-labelledby="report-heading">
+        <div class="report-heading"><h2 id="report-heading">İnceleme kaydı</h2><button class="secondary" id="export" type="button">JSON dışa aktar ↓</button></div>
+        <div class="target-card"><div><span class="small-label">GERÇEK ANA MAKİNE</span><strong id="host"></strong><span id="domain" class="quiet"></span></div><div class="summary-meta"><span id="mode"></span><span id="duration"></span><span id="completion"></span></div></div>
+        <p id="normalized-url" class="normalized"></p>
+        <div id="conclusion" class="notice"></div>
+        <div class="tabs" role="tablist" aria-label="Rapor görünümü"><button id="evidence-tab" role="tab" aria-selected="true" aria-controls="evidence-panel" type="button">Bulgular</button><button id="raw-tab" role="tab" aria-selected="false" aria-controls="raw-panel" tabindex="-1" type="button">Ham JSON</button></div>
+        <div id="evidence-panel" role="tabpanel" aria-labelledby="evidence-tab"><div id="findings"></div><div id="evidence"></div><ul id="limits" class="limits"></ul></div>
+        <div id="raw-panel" role="tabpanel" aria-labelledby="raw-tab" hidden><pre id="raw"></pre></div>
+      </section>
+      <section class="command"><span>CLI</span><code>python t3.py inspect example.com --active --json</code><p>Web arayüzü ve komut satırı aynı inceleme çekirdeğini kullanır. Statik sürümün kapsamı yalnızca URL ayrıştırmadır.</p></section>
+    </main>
+    <footer><span>T3 · Temur Can Bulut</span><span>Bir bulgunun yokluğu, güvenlik kanıtı değildir.</span></footer>
+  </div>
 </body>
 </html>

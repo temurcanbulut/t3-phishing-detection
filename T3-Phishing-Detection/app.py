@@ -1,185 +1,107 @@
-from flask import Flask, request, jsonify, render_template
-import whois
-import ssl
-import socket
-import requests
-import re
-from datetime import datetime
-import json
+"""Local URL analysis application. Run with python app.py."""
+
+import os
+from threading import BoundedSemaphore
+
+from analysis import InvalidTarget, analyze_url
+from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 4096
+app.config["TRUSTED_HOSTS"] = ["localhost", "127.0.0.1", "[::1]"]
+analysis_slots = BoundedSemaphore(4)
 
-# Domain geçerliliğini kontrol etme işlemi
-def validate_domain(domain):
-    domain_pattern = re.compile(r'^(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$')
-    return domain_pattern.match(domain) is not None
 
-# güven skoru
-def calculate_phishing_score(data):
-    score = 100
-    
-    # SSL sertifikası yoksa 30 puan düşürür
-    if not data['ssl_certificate_status']:
-        score -= 30
+@app.after_request
+def response_headers(response):
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; script-src 'self'; style-src 'self'; "
+        "img-src 'self'; connect-src 'self'; object-src 'none'; "
+        "base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+    )
+    return response
 
-    # Domain yaşı 1 yıldan azsa 20 puan düşürür
-    if data['domain_age_days'] < 365:
-        score -= 20
 
-    # Domain sıralaması belirli bir değerin üstündeyse 20 puan düşürür
-    rank_threshold = 1000000
-    if data['domain_rank'] is not None and data['domain_rank'] > rank_threshold:
-        score -= 20
-
-    # URL uzunluğu 75 karakterden fazlaysa 10 puan düşürür
-    if len(data['domain']) > 75:
-        score -= 10
-
-    # URL derinliği 5'ten fazlaysa 10 puan düşürür
-    if data['url_depth'] > 5:
-        score -= 10
-
-    # URL'de IP adresi varsa 10 puan düşürür
-    if data['contains_ip']:
-        score -= 10
-
-    # HSTS desteği yoksa 10 puan düşürür
-    if not data['hsts_support']:
-        score -= 10
-
-    # Google Safe Browsing kötü olarak işaretlediyse 50 puan düşürür
-    if data['google_safe_browsing_status']:
-        score -= 50
-
-    # Skorun negatif olmaması için minimum değer 0 olarak ayarlanır
-    return max(score, 0)
-
-# SSL sertifikası bilgilerini alan fonksiyon
-def get_ssl_info(domain):
-    try:
-        context = ssl.create_default_context()
-        with socket.create_connection((domain, 443)) as sock:
-            with context.wrap_socket(sock, server_hostname=domain) as ssock:
-                cert = ssock.getpeercert()
-                issued_to = cert.get('subject', ((('', ''),),))[0][0][1]
-                issued_by = cert.get('issuer', ((('', ''),),))[0][0][1]
-                valid_from = datetime.strptime(cert['notBefore'], '%b %d %H:%M:%S %Y %Z')
-                valid_till = datetime.strptime(cert['notAfter'], '%b %d %H:%M:%S %Y %Z')
-                days_to_expiry = (valid_till - datetime.now()).days
-                return {
-                    'ssl_certificate_status': True,
-                    'issued_to': issued_to,
-                    'issued_by': issued_by,
-                    'valid_from': valid_from.strftime('%Y-%m-%d'),
-                    'valid_till': valid_till.strftime('%Y-%m-%d'),
-                    'days_to_expiry': days_to_expiry
-                }
-    except Exception as e:
-        # SSL bilgisi alınamazsa durum False olarak döndürülür
-        return {
-            'ssl_certificate_status': False,
-            'error': str(e)
-        }
-
-# Domain sıralamasını alan fonksiyon
-def get_domain_rank(domain):
-    try:
-        url = f"https://www.alexa.com/siteinfo/{domain}"
-        response = requests.get(url)
-        rank = int(re.search(r'Global Rank:</span>\s*<strong>([\d,]+)', response.text).group(1).replace(',', ''))
-        return rank
-    except Exception as e:
-        return None
-
-# HSTS desteği olup olmadığını kontrol eden fonksiyon
-def check_hsts_support(domain):
-    try:
-        response = requests.get(f"https://{domain}")
-        return 'strict-transport-security' in response.headers
-    except Exception as e:
-        return False
-
-# URL'de IP adresi olup olmadığını kontrol eden fonksiyon
-def check_ip_in_url(url):
-    ip_pattern = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
-    return bool(re.search(ip_pattern, url))
-
-# URL derinliğini hesaplayan fonksiyon
-def get_url_depth(url):
-    return url.count('/')
-
-# GSB APİ kontrolü
-def check_google_safe_browsing(domain):
-    try:
-        api_key = "YOUR_GOOGLE_SAFE_BROWSING_API_KEY"
-        url = "https://safebrowsing.googleapis.com/v4/threatMatches:find?key=" + api_key
-        payload = {
-            "client": {
-                "clientId": "yourcompanyname",
-                "clientVersion": "1.0"
-            },
-            "threatInfo": {
-                "threatTypes": ["MALWARE", "SOCIAL_ENGINEERING"],
-                "platformTypes": ["ANY_PLATFORM"],
-                "threatEntryTypes": ["URL"],
-                "threatEntries": [
-                    {"url": f"http://{domain}"}
-                ]
-            }
-        }
-        headers = {'Content-Type': 'application/json'}
-        response = requests.post(url, data=json.dumps(payload), headers=headers)
-        result = response.json()
-        return bool(result.get('matches'))
-    except Exception as e:
-        return False
-
-# Ana sayfa
-@app.route('/')
+@app.get("/")
 def index():
-    return render_template('index.html')
+    return render_template(
+        "index.html",
+        safe_browsing_enabled=bool(os.getenv("SAFE_BROWSING_API_KEY")),
+        runtime="local",
+        asset_prefix="static",
+    )
 
-# Domain kontrolü 
-@app.route('/check_domain', methods=['GET'])
-def check_domain():
-    domain = request.args.get('domain')
-    domain = domain.replace('http://', '').replace('https://', '').split('/')[0]
 
-    # Domain formatının geçerli olup olmadığını kontrol et
-    if not validate_domain(domain):
-        return jsonify({'error': 'Geçersiz domain formatı'})
+@app.errorhandler(400)
+def bad_request(_error):
+    return jsonify(error="İstek biçimi veya Host başlığı geçersiz."), 400
 
+
+def run_analysis(value, active=False, threat_lookup=False):
+    if not analysis_slots.acquire(blocking=False):
+        return jsonify(error="Analizler sürüyor. Biraz sonra yeniden deneyin."), 429
     try:
-        domain_info = whois.whois(domain)
-        creation_date = domain_info.creation_date[0] if isinstance(domain_info.creation_date, list) else domain_info.creation_date
-        domain_age_days = (datetime.now() - creation_date).days if creation_date else 0
-        ssl_info = get_ssl_info(domain)
-        domain_rank = get_domain_rank(domain)
-        hsts_support = check_hsts_support(domain)
-        url_depth = get_url_depth(request.args.get('domain'))
-        contains_ip = check_ip_in_url(request.args.get('domain'))
-        google_safe_browsing_status = check_google_safe_browsing(domain)
+        return jsonify(
+            analyze_url(
+                value,
+                os.getenv("SAFE_BROWSING_API_KEY", ""),
+                active=active,
+                threat_lookup=threat_lookup,
+            )
+        )
+    except InvalidTarget as error:
+        return jsonify(error=str(error)), 400
+    finally:
+        analysis_slots.release()
 
-        data = {
-            'domain': domain,
-            'domain_age_days': domain_age_days,
-            'owner': domain_info.name,
-            'owner_email': domain_info.email,
-            'domain_rank': domain_rank,
-            'hsts_support': hsts_support,
-            'url_depth': url_depth,
-            'contains_ip': contains_ip,
-            'google_safe_browsing_status': google_safe_browsing_status,
-            **ssl_info
-        }
 
-        # güven skorunu hesapla
-        data['score'] = calculate_phishing_score(data)
+@app.post("/api/analyze")
+def analyze():
+    origin = request.headers.get("Origin")
+    if origin and origin != request.host_url.rstrip("/"):
+        return jsonify(error="Farklı bir web sitesinden analiz isteği kabul edilmez."), 403
+    if not request.is_json:
+        return jsonify(error="JSON biçiminde bir URL gönderin."), 415
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify(error="Geçerli bir JSON nesnesi gönderin."), 400
+    for key in ("active", "threat_lookup"):
+        if key in payload and not isinstance(payload[key], bool):
+            return jsonify(error="Analiz seçenekleri true/false olmalıdır."), 400
+    return run_analysis(
+        payload.get("url"), payload.get("active", False), payload.get("threat_lookup", False)
+    )
 
-        return jsonify(data)
-    except Exception as e:
-        return jsonify({'error': str(e)})
 
-# Uygulama ana fonksiyonu
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.get("/check_domain")
+def check_domain():
+    return jsonify(error="URL içeren GET uç noktası kaldırıldı. POST /api/analyze kullanın."), 405
+
+
+@app.errorhandler(413)
+def too_large(_error):
+    return (
+        jsonify(error="İstek çok büyük. En fazla 2048 karakterlik URL kullanın."),
+        413,
+    )
+
+
+if __name__ == "__main__":
+    from waitress import serve
+
+    print("T3 URL & Domain Inspector: http://127.0.0.1:5000")
+    serve(
+        app,
+        host="127.0.0.1",
+        port=5000,
+        threads=8,
+        max_request_body_size=4096,
+        max_request_header_size=16384,
+        connection_limit=32,
+        backlog=32,
+        channel_timeout=15,
+        cleanup_interval=5,
+    )

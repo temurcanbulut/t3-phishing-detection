@@ -8,10 +8,6 @@
 <p align="center">Inspect a link. Keep the observations. Compare what changed.<br>A local investigation workspace with a CLI, timestamped evidence and portable JSON reports.</p>
 <p align="center"><a href="README.tr.md">Türkçe</a> · <a href="#start">Start</a> · <a href="docs/TECHNICAL.md">Technical reference</a> · <a href="docs/ROADMAP.md">Roadmap</a></p>
 
-![T3 collecting evidence, opening a saved report and comparing an earlier observation](docs/images/workflow.gif)
-
-The recording uses the real local application and example.com. The optional threat provider is not configured. [Still image](docs/images/inspector.png) · [Mobile](docs/images/mobile.png).
-
 ## What you can do
 
 - **See the actual destination.** Separate the entered URL, ASCII host and registrable domain before inspecting a link.

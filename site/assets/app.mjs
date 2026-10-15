@@ -1,9 +1,12 @@
 import {analyzeLocal} from './url-local.mjs';
+import {parseSavedReport, compareSavedReports, MAX_REPORT_BYTES} from './reports.mjs';
 
 const $ = selector => document.querySelector(selector);
 const staticMode = document.body.dataset.runtime === 'static';
 const labels = {observed:'GÖZLENDİ', matched:'KAYNAK EŞLEŞMESİ', no_match:'EŞLEŞME YOK', verification_failed:'DOĞRULAMA BAŞARISIZ', unavailable:'TAMAMLANAMADI', limited:'SINIRA ULAŞILDI', blocked:'ENGELLENDİ', not_run:'ÇALIŞTIRILMADI', not_configured:'YAPILANDIRILMADI'};
 let latest = null;
+let comparison = null;
+let revision = 0;
 
 function node(tag, text, className) {
   const element = document.createElement(tag);
@@ -21,13 +24,23 @@ function showTab(raw) {
   $('#evidence-tab').tabIndex = raw ? -1 : 0;
 }
 
-function render(data) {
+function render(data, origin = 'Bu oturumda oluşturuldu.') {
+  comparison = null;
+  $('#comparison-result').replaceChildren();
+  $('#compare-error').hidden = true;
+  $('#export-comparison').disabled = true;
   $('#host').textContent = data.target.host;
   $('#domain').textContent = data.target.registrable_domain ? `Kayıt edilebilir alan adı: ${data.target.registrable_domain}` : 'Kayıt edilebilir alan adı bu modda belirlenmedi.';
   $('#normalized-url').textContent = data.target.url;
-  $('#mode').textContent = staticMode ? 'BROWSER / OFFLINE' : data.scope.active ? 'ACTIVE' : 'PASSIVE';
+  $('#mode').textContent = data.schema === 't3-browser-url/1' ? 'BROWSER / OFFLINE' : data.scope.active ? 'ACTIVE' : 'PASSIVE';
   $('#duration').textContent = `${data.duration_ms} ms`;
   $('#completion').textContent = data.partial ? 'KISMİ KAYIT' : 'İSTENEN KAPSAM TAMAMLANDI';
+  $('#provenance').textContent = `${origin} Başlangıç: ${data.started_at}. Kayıt, kaynağın doğruluğunu kanıtlamaz.`;
+  $('#probe-overview').replaceChildren(...data.evidence.map(item => {
+    const box = node('div', undefined, 'probe-tile');
+    box.append(node('strong', item.label), node('span', labels[item.status] || item.status, `probe-state ${item.status}`));
+    return box;
+  }));
   $('#conclusion').textContent = data.conclusion === 'threat_source_match'
     ? 'Bir tehdit kaynağı URL eşleşmesi bildirdi. Kaynağı, zamanı ve eşleşme türünü aşağıdan inceleyin.'
     : 'Güvenli / zararlı kararı verilmedi. Aşağıdaki kayıt, bu incelemede gözlenen teknik bulguları gösterir.';
@@ -55,13 +68,15 @@ $('#inspect-form').addEventListener('submit', async event => {
   $('#error').hidden = true;
   $('#report').hidden = true;
   latest = null;
+  const currentRevision = ++revision;
   $('#run').disabled = true;
   $('#progress').hidden = false;
   $('#inspect-form').setAttribute('aria-busy', 'true');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    if (staticMode) latest = analyzeLocal($('#target').value);
+    let result;
+    if (staticMode) result = analyzeLocal($('#target').value);
     else {
       const response = await fetch('api/analyze', {method:'POST', headers:{'Content-Type':'application/json'}, signal:controller.signal,
         body:JSON.stringify({url:$('#target').value.trim(), active:$('#active').checked, threat_lookup:$('#threat').checked})});
@@ -69,9 +84,9 @@ $('#inspect-form').addEventListener('submit', async event => {
       try { data = await response.json(); }
       catch { throw new Error(response.status === 413 ? 'İstek çok büyük. Daha kısa bir URL kullanın.' : `İnceleme servisi geçerli bir yanıt döndürmedi (HTTP ${response.status}).`); }
       if (!response.ok) throw new Error(data.error || 'İnceleme tamamlanamadı.');
-      latest = data;
+      result = data;
     }
-    render(latest);
+    if (currentRevision === revision) { latest = result; render(latest); }
   } catch (error) {
     $('#error').textContent = error.name === 'AbortError' ? 'İstek süresi doldu; sonuç alınamadı.' : error.message;
     $('#error').hidden = false;
@@ -93,12 +108,78 @@ for (const selector of ['#raw-tab', '#evidence-tab']) $(selector).addEventListen
     $(raw ? '#raw-tab' : '#evidence-tab').focus();
   }
 });
-$('#export').addEventListener('click', () => {
-  if (!latest) return;
-  const url = URL.createObjectURL(new Blob([JSON.stringify(latest, null, 2)], {type:'application/json'}));
+function download(data, filename) {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}));
   const link = node('a');
   link.href = url;
-  link.download = 't3-evidence.json';
+  link.download = filename;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+$('#export').addEventListener('click', () => {if (latest) download(latest, 't3-evidence.json');});
+
+async function readFile(input) {
+  const file = input.files[0];
+  if (!file) return null;
+  input.value = '';
+  if (file.size > MAX_REPORT_BYTES) throw new Error('Rapor en fazla 4 MiB olabilir.');
+  const bytes = await file.arrayBuffer();
+  let source;
+  try { source = new TextDecoder('utf-8', {fatal:true}).decode(bytes); }
+  catch { throw new Error('UTF-8 kodlamasında bir JSON dosyası seçin.'); }
+  const data = parseSavedReport(source);
+  const hash = crypto.subtle ? Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), x => x.toString(16).padStart(2, '0')).join('') : null;
+  return {data, hash};
+}
+
+$('#open-report').addEventListener('change', async event => {
+  const currentRevision = ++revision;
+  $('#file-error').hidden = true;
+  try {
+    const record = await readFile(event.target);
+    if (!record || currentRevision !== revision) return;
+    latest = record.data;
+    render(latest, `Yerel dosyadan açıldı. SHA256: ${record.hash || 'bu ortamda hesaplanamadı'}.`);
+  } catch (error) {
+    $('#file-error').textContent = error.message;
+    $('#file-error').hidden = false;
+  }
 });
+
+$('#example').addEventListener('click', () => {
+  ++revision;
+  latest = analyzeLocal('https://example.com/account?next=%2Fsettings');
+  render(latest, 'Yerel URL örneği; ağ bağlantısı yapılmadı.');
+});
+
+$('#compare-report').addEventListener('change', async event => {
+  const current = latest;
+  const currentRevision = revision;
+  $('#compare-error').hidden = true;
+  $('#comparison-result').replaceChildren();
+  $('#export-comparison').disabled = true;
+  comparison = null;
+  try {
+    const record = await readFile(event.target);
+    if (!record || currentRevision !== revision || !current) return;
+    comparison = compareSavedReports(record.data, current);
+    comparison.before_sha256 = record.hash;
+    // The current view may be freshly collected, so no original-file hash is invented.
+    comparison.after_representation = 'current_report_view';
+    const result = $('#comparison-result');
+    result.append(node('p', `${comparison.changes.length} kontrol değişti. ${comparison.scope_changed ? 'İnceleme kapsamı da değişti; sonuçları aynı koşullar gibi yorumlamayın.' : 'İnceleme kapsamları aynı.'}`, 'notice'));
+    result.append(node('p', `Önce: ${comparison.before_started_at} → Sonra: ${comparison.after_started_at}`, 'quiet'));
+    for (const change of comparison.changes) {
+      const detail = node('details'), summary = node('summary', change.probe);
+      detail.append(summary, node('pre', JSON.stringify({before:change.before, after:change.after}, null, 2)));
+      result.append(detail);
+    }
+    if (!comparison.changes.length) result.append(node('p', 'Kayıtlı bulgular aynı. Bu, sitenin değişmediğini veya güvenli olduğunu kanıtlamaz.', 'quiet'));
+    result.append(node('p', `Önceki dosyanın SHA256 özeti: ${record.hash || 'hesaplanamadı'}. Dosya özeti kaynak doğrulaması değildir.`, 'provenance'));
+    $('#export-comparison').disabled = false;
+  } catch (error) {
+    $('#compare-error').textContent = error.message;
+    $('#compare-error').hidden = false;
+  }
+});
+$('#export-comparison').addEventListener('click', () => {if (comparison) download(comparison, 't3-comparison.json');});

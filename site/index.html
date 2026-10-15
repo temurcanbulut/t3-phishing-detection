@@ -7,6 +7,7 @@
   <title>T3 — URL & Domain Inspector</title>
   <link rel="icon" href="assets/logo.png">
   <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="assets/workspace.css">
   <script type="module" src="assets/app.mjs"></script>
 </head>
 <body data-runtime="static">
@@ -16,6 +17,7 @@
       <div class="section-label">INVESTIGATION WORKSPACE <span>01</span></div>
       <h1>Bağlantı ve alan adı incelemesi</h1>
       <p class="intro">Puan tahminleri yerine kaynağı, zamanı ve kapsamı belli teknik bulgular.</p>
+      <nav class="workflow" aria-label="Çalışma akışı"><a href="#inspect-form"><b>01</b> Hedefi incele</a><a href="#archive"><b>02</b> Kaydı aç</a><a href="#comparison"><b>03</b> Değişimi karşılaştır</a></nav>
       <div class="notice"><strong>Statik sürüm:</strong> URL tarayıcıda ayrıştırılır. DNS, TLS, içerik ve tehdit listesi kontrolleri bu sayfada çalışmaz. Ağ incelemesi için yerel uygulamayı veya <code>python t3.py inspect example.com --active</code> komutunu kullanın.</div>
       <section class="query" aria-label="İnceleme seçenekleri">
         <form id="inspect-form">
@@ -26,14 +28,27 @@
         </form>
         <p id="error" role="alert" hidden></p><p id="progress" role="status" hidden>Kanıtlar toplanıyor…</p>
       </section>
+      <section id="archive" class="archive" aria-labelledby="archive-heading">
+        <div><h2 id="archive-heading">Kayıtlarla çalış</h2><p class="quiet">Dışa aktardığınız JSON'u açın. Dosya bu tarayıcıda kalır; hedefe yeniden bağlanılmaz.</p></div>
+        <div class="archive-actions"><label class="file-button" for="open-report">JSON raporu aç<input id="open-report" type="file" accept=".json,application/json"></label><button id="example" type="button" class="secondary">URL örneğini dene</button></div>
+      </section>
+      <p id="file-error" role="alert" hidden></p>
       <section id="report" hidden aria-labelledby="report-heading">
         <div class="report-heading"><h2 id="report-heading">İnceleme kaydı</h2><button class="secondary" id="export" type="button">JSON dışa aktar ↓</button></div>
         <div class="target-card"><div><span class="small-label">GERÇEK ANA MAKİNE</span><strong id="host"></strong><span id="domain" class="quiet"></span></div><div class="summary-meta"><span id="mode"></span><span id="duration"></span><span id="completion"></span></div></div>
         <p id="normalized-url" class="normalized"></p>
+        <p id="provenance" class="provenance" role="status"></p>
+        <div id="probe-overview" class="probe-overview" aria-label="Kontrol kapsamı"></div>
         <div id="conclusion" class="notice"></div>
         <div class="tabs" role="tablist" aria-label="Rapor görünümü"><button id="evidence-tab" role="tab" aria-selected="true" aria-controls="evidence-panel" type="button">Bulgular</button><button id="raw-tab" role="tab" aria-selected="false" aria-controls="raw-panel" tabindex="-1" type="button">Ham JSON</button></div>
         <div id="evidence-panel" role="tabpanel" aria-labelledby="evidence-tab"><div id="findings"></div><div id="evidence"></div><ul id="limits" class="limits"></ul></div>
         <div id="raw-panel" role="tabpanel" aria-labelledby="raw-tab" hidden><pre id="raw"></pre></div>
+        <section id="comparison" class="comparison" aria-labelledby="comparison-heading">
+          <div class="report-heading"><h2 id="comparison-heading">Önce / sonra</h2><button id="export-comparison" class="secondary" type="button" disabled>Farkları dışa aktar</button></div>
+          <p class="quiet">Ekrandaki kayıt “sonra” olarak kullanılır. Aynı URL'nin önceki kaydını açın. Sadece toplama zamanının değişmesi fark sayılmaz.</p>
+          <label class="file-button" for="compare-report">Önceki JSON'u seç<input id="compare-report" type="file" accept=".json,application/json"></label>
+          <p id="compare-error" role="alert" hidden></p><div id="comparison-result" aria-live="polite"></div>
+        </section>
       </section>
       <section class="command"><span>CLI</span><code>python t3.py inspect example.com --active --json</code><p>Web arayüzü ve komut satırı aynı inceleme çekirdeğini kullanır. Statik sürümün kapsamı yalnızca URL ayrıştırmadır.</p></section>
     </main>

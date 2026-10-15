@@ -1,3 +1,10 @@
+# Changelog
+
+## Product workflows — 2026-10-15
+
+- Added local saved-report import, schema/structure limits, probe overview and same-target report comparison with scope changes and JSON difference export.
+- Added a real workflow GIF, Turkish quickstart and separate technical reference.
+
 # Changes
 
 ## Evidence inspector — 2026-10-15

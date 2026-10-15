@@ -9,45 +9,45 @@ import json
 
 app = Flask(__name__)
 
-# Domain geçerliliğini kontrol eden fonksiyon
+# Domain geçerliliğini kontrol etme işlemi
 def validate_domain(domain):
     domain_pattern = re.compile(r'^(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$')
     return domain_pattern.match(domain) is not None
 
-# Phishing skorunu hesaplayan fonksiyon
+# güven skoru
 def calculate_phishing_score(data):
     score = 100
     
-    # SSL sertifikası yoksa 30 puan düşülür
+    # SSL sertifikası yoksa 30 puan düşürür
     if not data['ssl_certificate_status']:
         score -= 30
 
-    # Domain yaşı 1 yıldan azsa 20 puan düşülür
+    # Domain yaşı 1 yıldan azsa 20 puan düşürür
     if data['domain_age_days'] < 365:
-        score -= 30
+        score -= 20
 
-    # Domain sıralaması belirli bir değerin üstündeyse 20 puan düşülür
+    # Domain sıralaması belirli bir değerin üstündeyse 20 puan düşürür
     rank_threshold = 1000000
     if data['domain_rank'] is not None and data['domain_rank'] > rank_threshold:
         score -= 20
 
-    # URL uzunluğu 75 karakterden fazlaysa 10 puan düşülür
+    # URL uzunluğu 75 karakterden fazlaysa 10 puan düşürür
     if len(data['domain']) > 75:
         score -= 10
 
-    # URL derinliği 5'ten fazlaysa 10 puan düşülür
+    # URL derinliği 5'ten fazlaysa 10 puan düşürür
     if data['url_depth'] > 5:
         score -= 10
 
-    # URL'de IP adresi varsa 10 puan düşülür
+    # URL'de IP adresi varsa 10 puan düşürür
     if data['contains_ip']:
         score -= 10
 
-    # HSTS desteği yoksa 10 puan düşülür
+    # HSTS desteği yoksa 10 puan düşürür
     if not data['hsts_support']:
         score -= 10
 
-    # Google Safe Browsing kötü olarak işaretlediyse 50 puan düşülür
+    # Google Safe Browsing kötü olarak işaretlediyse 50 puan düşürür
     if data['google_safe_browsing_status']:
         score -= 50
 
@@ -108,7 +108,7 @@ def check_ip_in_url(url):
 def get_url_depth(url):
     return url.count('/')
 
-# Google Safe Browsing API ile domainin kötü amaçlı olup olmadığını kontrol eden fonksiyon
+# GSB APİ kontrolü
 def check_google_safe_browsing(domain):
     try:
         api_key = "YOUR_GOOGLE_SAFE_BROWSING_API_KEY"
@@ -134,12 +134,12 @@ def check_google_safe_browsing(domain):
     except Exception as e:
         return False
 
-# Ana sayfa rotası
+# Ana sayfa
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# Domain kontrolü rotası
+# Domain kontrolü 
 @app.route('/check_domain', methods=['GET'])
 def check_domain():
     domain = request.args.get('domain')
@@ -173,7 +173,7 @@ def check_domain():
             **ssl_info
         }
 
-        # Phishing skorunu hesapla
+        # güven skorunu hesapla
         data['score'] = calculate_phishing_score(data)
 
         return jsonify(data)

@@ -1,96 +1,84 @@
-# T3 Phishing Detection [ Web Application ]
+# T3 Phishing Detection
 
-This project is a web-based application designed to detect phishing attacks by analyzing URLs. The application calculates a phishing score based on various factors, such as SSL certificate status and domain age, to help determine whether a URL is malicious.
+A local web application that explains URL risk signals, shows missing evidence, and exports a JSON report. The interface is in Turkish. Development continues in this repository; earlier implementations are in the commit history.
 
-## Table of Contents
+## Run
 
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-- [API Endpoints](#api-endpoints)
-- [How It Works](#how-it-works)
-- [Contributing](#contributing)
+Python 3.11 or newer:
 
-## Features
+```sh
+git clone https://github.com/temurcanbulut/t3-phishing-detection.git
+cd t3-phishing-detection
+python -m venv .venv
+```
 
-- **Domain Validation**: Checks whether the domain format is valid.
-- **Phishing Score Calculation**: Calculates a phishing score based on various criteria, such as SSL certificate status, domain age, and URL length.
-- **SSL Certificate Information**: Retrieves SSL certificate details, including the issuing authority, validity period, and expiration date.
-- **Domain Ranking**: Retrieves the global ranking of the domain using Alexa Rank.
-- **HSTS Support Check**: Determines whether the domain supports HTTP Strict Transport Security (HSTS).
-- **IP Address Check**: Detects whether the URL contains an IP address instead of a domain name.
-- **Google Safe Browsing**: Checks if the domain is flagged as malicious by the Google Safe Browsing API.
+Activate with `.venv\Scripts\Activate.ps1` on Windows PowerShell or `source .venv/bin/activate` on Linux/macOS, then:
 
-## Installation
+```sh
+python -m pip install -r requirements.txt
+python T3-Phishing-Detection/app.py
+```
 
-1. **Clone the repository**:
-    ```bash
-    git clone https://github.com/your-username/phishing-detection.git
-    cd phishing-detection
-    ```
+Open **http://127.0.0.1:5000**. Waitress binds to the loopback interface; debug mode is disabled. This is a local tool, not a public multi-user scanner.
 
-2. **Create and activate a virtual environment**:
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate
-    ```
+## What the report contains
 
-3. **Install dependencies**:
-    ```bash
-    pip install -r requirements.txt
-    ```
+- HTTP/HTTPS, URL length, path depth, IP literal and internationalized domain signals.
+- TLS certificate verification and HSTS response headers from the target host on port 443.
+- Optional Google Safe Browsing threat-list lookup using the full normalized URL.
+- A reason and state for every check: checked, warning, threat match, information, unavailable or unconfigured.
+- Completed-check count, elapsed time and a downloadable JSON report. Reports are not stored by the application.
 
-4. **Run the application**:
-    ```bash
-    python app.py
-    ```
+The **risk score increases with observed risk signals**. It is a rule total, not a calibrated probability. HTTPS and an empty threat-list response do not prove that a link is safe. Missing external evidence makes a low-score report **incomplete**. Page contents, redirect chains, downloads and brand impersonation are not analyzed. HSTS is informational and does not add risk points.
 
-## Usage
+| Signal | Points |
+|---|---:|
+| HTTP URL | 10 |
+| URL longer than 150 characters | 5 |
+| More than 5 nonempty path segments | 5 |
+| IP literal instead of a domain | 10 |
+| Invalid TLS certificate | 15 |
+| Safe Browsing threat match | 80 |
 
-Once the application is running, open your web browser and go to `http://127.0.0.1:5000/`. You can enter a domain, and the application will return a JSON response containing various details about the domain, including a phishing score.
+Scores are capped at 100. High: 60+, medium: 20–59; below 20 is incomplete if any external check is missing, otherwise low observed risk. The `incomplete` field is independent of risk level, so missing evidence remains visible even on a high-risk report.
 
-## API Endpoints
+## Optional Safe Browsing
 
-### `GET /`
+Set `SAFE_BROWSING_API_KEY` before starting:
 
-Renders the homepage where you can input a domain for analysis.
+```powershell
+$env:SAFE_BROWSING_API_KEY = 'your-key'
+python T3-Phishing-Detection/app.py
+```
 
-### `GET /check_domain`
+On Linux/macOS, use `export SAFE_BROWSING_API_KEY='your-key'`. `.env.example` documents the setting; `.env` files are not automatically loaded. Never commit a key.
 
-Analyzes the provided domain and returns a JSON object containing the following details:
-- **domain**: The domain being analyzed.
-- **domain_age_days**: The age of the domain in days.
-- **owner**: The name of the domain owner.
-- **owner_email**: The email address of the domain owner.
-- **domain_rank**: The global rank of the domain.
-- **ssl_certificate_status**: Whether the domain has a valid SSL certificate.
-- **issued_to**: The entity to whom the SSL certificate was issued.
-- **issued_by**: The authority that issued the SSL certificate.
-- **valid_from**: The start date of the SSL certificate.
-- **valid_till**: The expiration date of the SSL certificate.
-- **days_to_expiry**: The number of days until the SSL certificate expires.
-- **hsts_support**: Whether the domain supports HSTS.
-- **url_depth**: The depth of the URL path.
-- **contains_ip**: Whether the URL contains an IP address.
-- **google_safe_browsing_status**: Whether the domain is flagged by Google Safe Browsing.
-- **score**: The calculated phishing score.
+Enabling this sends the **full URL, including query parameters**, to Google. Avoid submitting private tokens or account links. Without a key, the check explicitly shows “Yapılandırılmadı”. Provider failures show “Tamamlanamadı”, never a clean result. Review the provider's [Lookup API documentation](https://developers.google.com/safe-browsing/v4/lookup-api) and [usage terms](https://developers.google.com/safe-browsing/v4/terms) before enabling it.
 
-## How It Works
+## Network behavior
 
-The application uses a series of techniques to evaluate the phishing risk of a given domain:
+Only HTTP/HTTPS URLs on their standard ports are accepted. Credentials in URLs, private/reserved/multicast IPs and DNS answers mixing public/private addresses are rejected. The target TLS connection is pinned to a checked DNS address while retaining hostname verification, preventing a second DNS lookup from changing the destination. Only a `HEAD /` request is sent; no page body is read and target redirects are not followed. HTTPS is probed on port 443 even for an HTTP input.
 
-1. **Domain Validation**: Ensures the domain has a valid format.
-2. **SSL Information**: Checks whether the domain has a valid SSL certificate and retrieves certificate details.
-3. **Domain Ranking**: Fetches the global ranking of the domain from Alexa.
-4. **HSTS Check**: Verifies if the domain supports HSTS.
-5. **Google Safe Browsing**: Uses the Google Safe Browsing API to check if the domain is flagged as malicious.
-6. **Phishing Score Calculation**: Combines the results of these checks to produce a phishing score.
+Target connections have a 4-second socket timeout; Google requests have 4-second connect/read timeouts. The two checks run concurrently. System DNS resolution follows the OS resolver's own timeout. These are per-operation timeouts, not a hard end-to-end deadline. At most four analyses run concurrently per process; additional requests return HTTP 429. A public deployment would additionally need authentication, per-client quotas and deployment-specific egress controls.
 
-## Contributing
+## API
 
-We welcome contributions! Please send a pull request or open an issue to discuss ideas or suggestions.
+```sh
+curl -X POST http://127.0.0.1:5000/api/analyze \
+  -H 'Content-Type: application/json' \
+  -d '{"url":"https://example.com/path?x=1"}'
+```
 
-![1](https://github.com/user-attachments/assets/a2cf71c6-5171-4284-9327-f89ebd3117c5)
+Response fields: `url`, `domain`, `risk_score`, `risk_level`, `incomplete`, `completed_checks`, `total_checks`, `checks`, `duration_ms`, `analyzed_at`, `methodology`.
 
-Example usage video:
-https://www.youtube.com/watch?v=6S9v_cZMzoo
+`GET /check_domain?domain=example.com` remains available with the same **new report schema**. The previous trust `score`, domain rank, domain age and owner fields have been removed; clients must migrate to `risk_score` and per-check states. Invalid input returns 400; non-JSON POST requests 415; oversized requests 413; busy capacity 429.
+
+## Development
+
+```sh
+python -m unittest discover -s tests -v
+```
+
+Tests mock all external probes and cover URL handling, provider failures, private-network rejection, pinned connections, request limits and report uncertainty. CI runs on Windows and Linux with Python 3.11 and 3.13.
+
+The [original demo video](https://www.youtube.com/watch?v=6S9v_cZMzoo) shows the earlier interface and scoring behavior. See [CHANGELOG.md](CHANGELOG.md) for current changes.

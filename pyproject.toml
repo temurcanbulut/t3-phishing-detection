@@ -1,3 +1,27 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "t3-url-inspector"
+version = "0.3.1"
+description = "Bounded URL, DNS, TLS and HTTP evidence collection with offline report comparison"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.txt"]
+dynamic = ["dependencies"]
+
+[project.scripts]
+t3-inspect = "t3core.cli:main"
+
+[tool.setuptools]
+packages = ["t3core"]
+package-dir = {"" = "T3-Phishing-Detection"}
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
 [tool.ruff]
 target-version = "py311"
 line-length = 100

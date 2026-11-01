@@ -5,3 +5,9 @@ __pycache__/
 .coverage
 .hypothesis/
 .ruff_cache/
+
+# Generated from templates/static; Pages builds it at publication time.
+site/
+build/
+*.egg-info/
+dist/

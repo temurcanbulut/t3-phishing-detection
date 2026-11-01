@@ -53,6 +53,16 @@ Imported files stay in browser memory. Both the local UI and static build suppor
 
 ## Command line
 
+Install from this checkout; this does not claim a PyPI publication:
+
+```sh
+python -m pip install .
+t3-inspect inspect example.com --json
+python -m t3core compare before.json after.json
+```
+
+The original launcher remains compatible:
+
 ```sh
 python t3.py inspect example.com
 python t3.py inspect https://example.com/login --active --output before.json
@@ -94,3 +104,5 @@ The current local run passes 60 Python and 8 JavaScript tests. These verify tran
 ## License
 
 Original project source code and documentation text are licensed under [MIT](LICENSE). The html5lib notice and dependency licenses remain separate; see [licensing scope](LICENSING.md) and [third-party notices](THIRD_PARTY_NOTICES.txt).
+
+[2026-11 source-review follow-up and exact limitations](docs/AUDIT_FOLLOWUP.md).

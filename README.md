@@ -90,3 +90,7 @@ python tools/build_site.py
 The current local run passes 60 Python and 8 JavaScript tests. These verify transport, parsing, report boundaries and comparison, not phishing detection accuracy. CI covers Windows/Linux and Python 3.11/3.13. A real provider-key integration remains unverified.
 
 [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md) · [Third-party notices](THIRD_PARTY_NOTICES.txt)
+
+## License
+
+Original project source code and documentation text are licensed under [MIT](LICENSE). The html5lib notice and dependency licenses remain separate; see [licensing scope](LICENSING.md) and [third-party notices](THIRD_PARTY_NOTICES.txt).

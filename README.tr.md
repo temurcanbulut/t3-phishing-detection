@@ -55,3 +55,7 @@ Statik sayfa bir çevrimiçi phishing tarayıcısı değildir. Python ve tarayı
 Google Safe Browsing için ortam değişkeninde API anahtarı ve ayrıca açık kullanıcı seçimi gerekir. Sorgu parametreleri dahil URL Google'a gönderilir. Bir eşleşme kaynağın bulgusudur; eşleşme olmaması güvenlik kanıtı değildir.
 
 [Geliştirme ve testler](README.md#development) · [Güvenlik sınırları](SECURITY.md) · [Yol haritası](docs/ROADMAP.md)
+
+## Lisans
+
+Özgün proje kodu ve belge metinleri [MIT](LICENSE) lisansındadır. html5lib atfı ve bağımlılıkların lisansları korunur; [kapsam](LICENSING.md) ve [üçüncü taraf bildirimleri](THIRD_PARTY_NOTICES.txt) ayrı açıklanır.

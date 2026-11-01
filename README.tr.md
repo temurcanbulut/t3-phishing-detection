@@ -59,3 +59,5 @@ Google Safe Browsing için ortam değişkeninde API anahtarı ve ayrıca açık 
 ## Lisans
 
 Özgün proje kodu ve belge metinleri [MIT](LICENSE) lisansındadır. html5lib atfı ve bağımlılıkların lisansları korunur; [kapsam](LICENSING.md) ve [üçüncü taraf bildirimleri](THIRD_PARTY_NOTICES.txt) ayrı açıklanır.
+
+[2026-11 source-review follow-up and exact limitations](docs/AUDIT_FOLLOWUP.md).

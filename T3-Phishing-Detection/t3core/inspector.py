@@ -115,12 +115,50 @@ async def probe_tls(target, resolver):
                 "Sertifika alan adı ve sistem güven deposuyla doğrulandı. Site sahibinin niyetini veya sayfanın güvenliğini kanıtlamaz.",
             )
     except ssl.SSLCertVerificationError as error:
+        # Evidence-only retry: same pinned public IP and SNI, no HTTP or credentials.
+        # Its result is never promoted to trusted and cannot affect the HTTP client.
+        observed = {"code": error.verify_code, "verification": "failed"}
+        observation_writer = None
+        try:
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE  # nosec B501 -- evidence-only isolated socket
+            context.minimum_version = ssl.TLSVersion.TLSv1_2
+            async with asyncio.timeout(2):
+                _, observation_writer = await asyncio.open_connection(
+                    addresses[0],
+                    443,
+                    ssl=context,
+                    server_hostname=target.host,
+                    ssl_handshake_timeout=1.5,
+                )
+                secure = observation_writer.get_extra_info("ssl_object")
+                der = secure.getpeercert(binary_form=True)
+                certificate = x509.load_der_x509_certificate(der)
+                observed.update(
+                    connected_ip=addresses[0],
+                    certificate_sha256=hashlib.sha256(der).hexdigest(),
+                    subject=certificate.subject.rfc4514_string(),
+                    issuer=certificate.issuer.rfc4514_string(),
+                    valid_from=certificate.not_valid_before_utc.isoformat(),
+                    valid_until=certificate.not_valid_after_utc.isoformat(),
+                    observation="unverified_certificate_only",
+                )
+        except (OSError, TimeoutError, ssl.SSLError, ValueError):
+            observed["observation"] = "unavailable"
+        finally:
+            if observation_writer is not None:
+                observation_writer.close()
+                try:
+                    await asyncio.wait_for(observation_writer.wait_closed(), timeout=0.2)
+                except (OSError, TimeoutError, ssl.SSLError):
+                    pass
         return evidence(
             "tls",
             "TLS sertifikası",
             "verification_failed",
-            {"code": error.verify_code},
-            "Sertifika doğrulaması başarısız. Doğrulama devre dışı bırakılmadı.",
+            observed,
+            "Sertifika doğrulanamadı. Aynı IP üzerinden yalnızca doğrulanmamış sertifika gözlendi; HTTP güven denetimi korunur.",
         )
     except (OSError, TimeoutError, ssl.SSLError):
         return evidence(

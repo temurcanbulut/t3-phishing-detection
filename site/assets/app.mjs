@@ -32,6 +32,8 @@ function factList(item) {
 }
 
 function render(data, origin = 'Bu oturumda oluşturuldu.') {
+  $('#error').hidden = true;
+  $('#file-error').hidden = true;
   comparison = null;
   $('#comparison-result').replaceChildren();
   $('#compare-error').hidden = true;

@@ -6,25 +6,24 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>T3 — URL & Domain Inspector</title>
   <link rel="icon" href="assets/logo.png">
-  <link rel="stylesheet" href="assets/styles.css">
-  <link rel="stylesheet" href="assets/workspace.css">
-  <link rel="stylesheet" href="assets/facts.css">
-  <script type="module" src="assets/app.mjs"></script>
+  <link rel="stylesheet" href="assets/styles.css?v=86df890556c0">
+  <link rel="stylesheet" href="assets/workspace.css?v=86df890556c0">
+  <link rel="stylesheet" href="assets/facts.css?v=86df890556c0">
+  <script type="module" src="assets/app.mjs?v=86df890556c0"></script>
 </head>
 <body data-runtime="static">
   <div class="workspace">
-    <header><div class="identity"><strong>T3</strong><span>URL & DOMAIN INSPECTOR</span></div><div class="runtime">BROWSER / OFFLINE</div><a href="https://github.com/temurcanbulut/t3-phishing-detection">Repository ↗</a></header>
+    <header><div class="identity"><strong>T3</strong><span>URL ve alan adı</span></div><div class="runtime">Tarayıcı · çevrimdışı</div><a href="https://github.com/temurcanbulut/t3-phishing-detection">Kaynak kod</a></header>
     <main>
-      <div class="section-label">INVESTIGATION WORKSPACE <span>01</span></div>
       <h1>Bağlantı ve alan adı incelemesi</h1>
       <p class="intro">Puan tahminleri yerine kaynağı, zamanı ve kapsamı belli teknik bulgular.</p>
-      <nav class="workflow" aria-label="Çalışma akışı"><a href="#inspect-form"><b>01</b> Hedefi incele</a><a href="#archive"><b>02</b> Kaydı aç</a><a href="#comparison"><b>03</b> Değişimi karşılaştır</a></nav>
-      <div class="notice"><strong>Statik sürüm:</strong> URL tarayıcıda ayrıştırılır. DNS, TLS, içerik ve tehdit listesi kontrolleri bu sayfada çalışmaz. Ağ incelemesi için yerel uygulamayı veya <code>python t3.py inspect example.com --active</code> komutunu kullanın.</div>
+      <div class="workbench"><div class="setup">
+      <div class="notice"><strong>Statik sürüm:</strong> URL tarayıcıda ayrıştırılır. DNS, TLS, içerik ve tehdit listesi kontrolleri bu sayfada çalışmaz. Ağ incelemesi için yerel uygulamayı veya <code>python t3.py inspect example.com --active</code> komutunu kullanın.</div><!-- taste-skill-ignore: reserved documentation domain; do not replace with an unrelated real target. -->
       <section class="query" aria-label="İnceleme seçenekleri">
         <form id="inspect-form">
-          <label for="target">HEDEF URL / ALAN ADI</label>
-          <div class="query-row"><span class="prompt" aria-hidden="true">›</span><input id="target" name="target" type="text" maxlength="2048" required autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="example.com veya https://example.com/login"><button id="run" type="submit">İncele <span aria-hidden="true">↵</span></button></div>
-          <div class="options"><label><input type="checkbox" id="active" disabled> Hedefe bağlan: DNS, TLS, yönlendirmeler ve sınırlı HTML</label><label><input type="checkbox" id="threat" disabled> Tam URL'yi Google Safe Browsing'e gönder <span>(anahtar yok)</span></label></div>
+          <label for="target">Hedef URL veya alan adı</label>
+          <div class="query-row"><input id="target" name="target" type="text" maxlength="2048" required autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="example.com veya https://example.com/login"><button id="run" type="submit">İncele</button></div><!-- taste-skill-ignore: reserved documentation domain; do not replace with an unrelated real target. -->
+          <div class="options"><label><input type="checkbox" id="active" disabled><span class="option-copy">Hedefe bağlan: DNS, TLS, yönlendirmeler ve sınırlı HTML</span></label><label><input type="checkbox" id="threat" disabled><span class="option-copy">Tam URL'yi Google Safe Browsing'e gönder <span>(anahtar yok)</span></span></label></div>
           <p class="quiet">Varsayılan mod hedefe ve üçüncü taraflara bağlanmaz. Ağ işlemleri 12 saniyelik süre bütçesi, 4 yönlendirme ve 128 KiB içerikle sınırlıdır. Raporlar otomatik kaydedilmez.</p>
         </form>
         <p id="error" role="alert" hidden></p><p id="progress" role="status" hidden>Kanıtlar toplanıyor…</p>
@@ -34,9 +33,10 @@
         <div class="archive-actions"><label class="file-button" for="open-report">JSON raporu aç<input id="open-report" type="file" accept=".json,application/json"></label><button id="example" type="button" class="secondary">URL örneğini dene</button></div>
       </section>
       <p id="file-error" role="alert" hidden></p>
+      </div>
       <section id="report" hidden aria-labelledby="report-heading">
-        <div class="report-heading"><h2 id="report-heading">İnceleme kaydı</h2><button class="secondary" id="export" type="button">JSON dışa aktar ↓</button></div>
-        <div class="target-card"><div><span class="small-label">GERÇEK ANA MAKİNE</span><strong id="host"></strong><span id="domain" class="quiet"></span></div><div class="summary-meta"><span id="mode"></span><span id="duration"></span><span id="completion"></span></div></div>
+        <div class="report-heading"><h2 id="report-heading">İnceleme kaydı</h2><button class="secondary" id="export" type="button">JSON dışa aktar</button></div>
+        <div class="target-card"><div><span class="small-label">Gerçek ana makine</span><strong id="host"></strong><span id="domain" class="quiet"></span></div><div class="summary-meta"><span id="mode"></span><span id="duration"></span><span id="completion"></span></div></div>
         <p id="normalized-url" class="normalized"></p>
         <p id="provenance" class="provenance" role="status"></p>
         <div id="probe-overview" class="probe-overview" aria-label="Kontrol kapsamı"></div>
@@ -51,7 +51,9 @@
           <p id="compare-error" role="alert" hidden></p><div id="comparison-result" aria-live="polite"></div>
         </section>
       </section>
-      <section class="command"><span>CLI</span><code>python t3.py inspect example.com --active --json</code><p>Web arayüzü ve komut satırı aynı inceleme çekirdeğini kullanır. Statik sürümün kapsamı yalnızca URL ayrıştırmadır.</p></section>
+      <section class="empty-report" aria-label="İlk inceleme"><h2>İnceleme kaydını burada göreceksiniz</h2><p>Bir URL girin veya kayıtlı bir raporu açın. Kaynağı, kapsamı ve zamanı birlikte inceleyin.</p><dl><dt>URL yapısı</dt><dd>Alan adını, yolu ve sorguyu ayırın.</dd><dt>Kayıtlı bulgular</dt><dd>JSON raporlarını hedefe yeniden bağlanmadan açın.</dd><dt>Karşılaştırma</dt><dd>Aynı URL'nin iki kaydı arasındaki değişimi okuyun.</dd></dl></section>
+      </div>
+      <section class="command"><span>CLI</span><code>python t3.py inspect example.com --active --json</code><p>Web arayüzü ve komut satırı aynı inceleme çekirdeğini kullanır. Statik sürümün kapsamı yalnızca URL ayrıştırmadır.</p></section><!-- taste-skill-ignore: reserved documentation domain; do not replace with an unrelated real target. -->
     </main>
     <footer><span>T3 · Temur Can Bulut</span><span>Bir bulgunun yokluğu, güvenlik kanıtı değildir.</span></footer>
   </div>

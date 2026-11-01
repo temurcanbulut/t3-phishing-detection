@@ -8,6 +8,8 @@
 <p align="center">Inspect a link. Keep the observations. Compare what changed.<br>A local investigation workspace with a CLI, timestamped evidence and portable JSON reports.</p>
 <p align="center"><a href="README.tr.md">Türkçe</a> · <a href="#start">Start</a> · <a href="docs/TECHNICAL.md">Technical reference</a> · <a href="docs/ROADMAP.md">Roadmap</a></p>
 
+**[Open the browser demo](https://temurcanbulut.github.io/t3-phishing-detection/):** inspect URL structure locally. DNS, TLS and network probes require the local application.
+
 ![A real local inspection: URL and options, readable TLS and HTTP observations, then report comparison](docs/images/evidence-walkthrough.gif)
 
 **Follow an inspection:** URL and options → readable TLS facts → HTTP observations → before/after comparison. The GIF uses actual local `example.com` results with captioned pauses. The comparison changes from passive to active scope; it does not demonstrate that the website changed. No threat provider was enabled. [Recording context](docs/DEMONSTRATION.md).
